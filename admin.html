@@ -1,265 +1,187 @@
-
 <!DOCTYPE html>
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BMS ADMIN - TOTAL CONTROL</title>
+    <title>BMS Win Go - Made in India</title>
+    
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#ff416c">
+    <link rel="manifest" href="manifest.json">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .active-mode { background: #ef4444 !important; border: 2px solid white !important; transform: scale(1.05); }
-        .bet-box { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255,255,255,0.1); }
-        body { background-color: #0b0f19; color: white; }
-        /* लॉगिन स्क्रीन के लिए */
-        #loginScreen { position: fixed; inset: 0; background: #0b0f19; z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap');
+        body { font-family: 'Poppins', sans-serif; background-color: #f4f7f9; }
+        .welcome-screen { position: fixed; inset: 0; background: linear-gradient(135deg, #ff416c, #ff4b2b); display: flex; align-items: center; justify-content: center; z-index: 9999; color: white; text-align: center; }
+        .bms-header { background: linear-gradient(to bottom, #ff416c, #ff4b2b); border-radius: 0 0 35px 35px; box-shadow: 0 10px 20px rgba(255, 65, 108, 0.3); }
+        .timer-active { border-bottom: 3px solid #ff416c; color: #ff416c !important; font-weight: 800; }
+        .number-btn { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.15); color: white; transition: 0.3s; }
+        .number-btn:active { transform: scale(0.9); }
+        .active-mult { background-color: #22c55e !important; color: white !important; border-color: #16a34a !important; transform: scale(1.05); }
+        .nav-tab { font-size: 12px; font-weight: 600; color: #777; transition: 0.3s; }
+        .history-btn-active { color: #ef4444; border-bottom: 2px solid #ef4444; }
+        .chart-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
     </style>
 </head>
-<body class="p-4 font-sans">
+<body class="pb-24">
 
-    <div id="loginScreen">
-        <div class="bg-gray-800 p-8 rounded-3xl shadow-2xl w-80 text-center">
-            <i class="fas fa-user-shield text-red-500 text-5xl mb-4"></i>
-            <h2 class="text-xl font-bold mb-4">Admin Access</h2>
-            <input type="password" id="adminPassInput" placeholder="Enter Password" class="w-full p-3 rounded-xl bg-gray-700 mb-4 outline-none border border-gray-600 focus:border-red-500">
-            <button onclick="loginAdmin()" class="w-full bg-red-600 py-3 rounded-xl font-bold uppercase">Unlock Panel</button>
-            <p id="errorMsg" class="text-red-500 text-xs mt-2 hidden">Wrong Password!</p>
+    <div id="welcome" class="welcome-screen">
+        <div>
+            <h1 class="text-5xl font-black italic tracking-tighter text-white">BMS GAME</h1>
+            <p class="mt-3 text-lg font-medium tracking-[0.3em] uppercase text-white">Made In India 🇮🇳</p>
         </div>
     </div>
 
-    <div id="adminContent" class="hidden">
-        <div class="max-w-4xl mx-auto">
-            <h1 class="text-2xl font-black text-red-500 italic mb-6 text-center uppercase tracking-widest">BMS MASTER PANEL</h1>
-
-            <div class="grid grid-cols-4 gap-2 mb-6">
-                <button onclick="setMode('30s', 30)" id="btn30s" class="bg-gray-800 p-3 rounded-2xl border border-gray-700 font-bold active-mode text-xs">30S</button>
-                <button onclick="setMode('1m', 60)" id="btn1m" class="bg-gray-800 p-3 rounded-2xl border border-gray-700 font-bold text-xs">1MIN</button>
-                <button onclick="setMode('3m', 180)" id="btn3m" class="bg-gray-800 p-3 rounded-2xl border border-gray-700 font-bold text-xs">3MIN</button>
-                <button onclick="setMode('5m', 300)" id="btn5m" class="bg-gray-800 p-3 rounded-2xl border border-gray-700 font-bold text-xs">5MIN</button>
-            </div>
-
-            <div class="flex justify-between items-center mb-6 bg-gray-800 p-4 rounded-3xl border border-gray-700">
-                <span class="text-yellow-500 font-black text-xs uppercase">MODE: <span id="currentModeDisplay" class="text-white ml-2">30S</span></span>
-                <span id="timerText" class="text-white font-black bg-red-600 px-6 py-1 rounded-full animate-pulse">00:30</span>
-            </div>
-
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
-                <div class="bet-box p-3 rounded-2xl text-center border-b-2 border-orange-500">
-                    <p class="text-[10px] text-gray-400 font-bold">BIG</p>
-                    <h3 id="betBig" class="text-lg font-black text-white">₹0</h3>
-                </div>
-                <div class="bet-box p-3 rounded-2xl text-center border-b-2 border-blue-500">
-                    <p class="text-[10px] text-gray-400 font-bold">SMALL</p>
-                    <h3 id="betSmall" class="text-lg font-black text-white">₹0</h3>
-                </div>
-                <div class="bet-box p-3 rounded-2xl text-center border-b-2 border-green-500">
-                    <p class="text-[10px] text-gray-400 font-bold">GREEN</p>
-                    <h3 id="betGreen" class="text-lg font-black text-white">₹0</h3>
-                </div>
-                <div class="bet-box p-3 rounded-2xl text-center border-b-2 border-red-500">
-                    <p class="text-[10px] text-gray-400 font-bold">RED</p>
-                    <h3 id="betRed" class="text-lg font-black text-white">₹0</h3>
-                </div>
-                <div class="bet-box p-3 rounded-2xl text-center border-b-2 border-purple-500">
-                    <p class="text-[10px] text-gray-400 font-bold">VIOLET</p>
-                    <h3 id="betViolet" class="text-lg font-black text-white">₹0</h3>
+    <div id="main-content" class="hidden">
+        <div class="bms-header p-6 text-white text-center">
+            <div class="flex justify-between items-center mb-6 px-2">
+                <span class="text-xl font-black italic">BMS Win Go</span>
+                <div class="flex gap-4">
+                    <button onclick="location.href='profile.html'"><i class="fas fa-user-circle text-xl"></i></button>
+                    <button onclick="toggleChat()"><i class="fas fa-headset text-xl"></i></button>
                 </div>
             </div>
+            <p class="text-xs opacity-80 font-bold uppercase tracking-widest">Total Wallet Balance</p>
+            <h1 class="text-5xl font-black mt-2 tracking-tighter">₹ <span id="main-balance">0.00</span></h1>
+            <div class="flex gap-4 mt-8 px-2">
+                <button onclick="location.href='withdrawal.html'" class="flex-1 bg-white text-red-600 py-3 rounded-full font-extrabold shadow-lg uppercase text-xs">Withdraw</button>
+                <button onclick="location.href='recharge.html'" class="flex-1 bg-green-500 text-white py-3 rounded-full font-extrabold shadow-lg uppercase text-xs">Deposit</button>
+            </div>
+        </div>
 
-            <div class="bg-gray-800 p-6 rounded-[2rem] border border-gray-700 mb-8 shadow-2xl">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xs font-bold text-yellow-500 uppercase italic">Next Result Control</h2>
-                    <button onclick="resetToAuto()" id="statusBtn" class="text-[10px] bg-blue-600 px-4 py-1 rounded-full font-bold">AUTO-PILOT 🤖</button>
+        <div class="grid grid-cols-4 bg-white mt-2 shadow-sm sticky top-0 z-50">
+            <button onclick="changeMode(this, 30)" class="mode-btn py-4 nav-tab timer-active">30s</button>
+            <button onclick="changeMode(this, 60)" class="mode-btn py-4 nav-tab">1m</button>
+            <button onclick="changeMode(this, 180)" class="mode-btn py-4 nav-tab">3m</button>
+            <button onclick="changeMode(this, 300)" class="mode-btn py-4 nav-tab">5m</button>
+        </div>
+
+        <div class="m-4">
+            <div class="bg-white rounded-3xl p-5 flex justify-between items-center border border-gray-100 shadow-sm relative overflow-hidden">
+                <div class="absolute left-0 top-0 h-full w-2 bg-red-500"></div>
+                <div>
+                    <p class="text-[10px] text-gray-400 font-black uppercase tracking-widest">Time Remaining</p>
+                    <h2 id="timer" class="text-4xl font-black text-gray-800 tracking-tighter">00:30</h2>
                 </div>
-                <div class="grid grid-cols-2 gap-4 mb-6">
-                    <button onclick="quickResult('Big')" class="bg-orange-600 py-4 rounded-3xl font-black text-lg">WIN BIG</button>
-                    <button onclick="quickResult('Small')" class="bg-blue-600 py-4 rounded-3xl font-black text-lg">WIN SMALL</button>
-                </div>
-                <div class="grid grid-cols-3 gap-3">
-                    <button onclick="quickResult('Green')" class="bg-green-600 py-3 rounded-2xl font-bold text-xs">GREEN</button>
-                    <button onclick="quickResult('Violet')" class="bg-purple-600 py-3 rounded-2xl font-bold text-xs">VIOLET</button>
-                    <button onclick="quickResult('Red')" class="bg-red-600 py-3 rounded-2xl font-bold text-xs">RED</button>
+                <div class="text-right">
+                    <p class="text-[10px] text-gray-400 font-black uppercase tracking-widest">Period ID</p>
+                    <p id="period-id" class="text-lg font-extrabold text-red-500">--</p>
                 </div>
             </div>
+        </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
-                <div class="bg-gray-800 p-4 rounded-2xl border border-gray-700">
-                    <h3 class="text-green-500 text-[10px] font-bold uppercase mb-4 border-b border-gray-700 pb-2">Recharge Requests</h3>
-                    <div id="rechargeList" class="space-y-2 h-40 overflow-y-auto text-xs"></div>
-                </div>
-                <div class="bg-gray-800 p-4 rounded-2xl border border-gray-700">
-                    <h3 class="text-orange-500 text-[10px] font-bold uppercase mb-4 border-b border-gray-700 pb-2">Withdrawal Requests</h3>
-                    <div id="withdrawList" class="space-y-2 h-40 overflow-y-auto text-xs"></div>
-                </div>
+        <div class="px-4">
+            <div class="grid grid-cols-3 gap-3 mb-6">
+                <button onclick="handleBet('Green')" class="bg-[#22c55e] text-white py-3 rounded-xl font-bold shadow-lg text-sm">Green</button>
+                <button onclick="handleBet('Violet')" class="bg-[#a855f7] text-white py-3 rounded-xl font-bold shadow-lg text-sm">Violet</button>
+                <button onclick="handleBet('Red')" class="bg-[#ef4444] text-white py-3 rounded-xl font-bold shadow-lg text-sm">Red</button>
+            </div>
+
+            <div class="grid grid-cols-5 gap-4 p-5 bg-white rounded-[2rem] shadow-inner mb-6 border border-gray-50">
+                <button onclick="handleBet('0')" class="number-btn bg-gradient-to-br from-red-500 to-purple-500">0</button>
+                <button onclick="handleBet('1')" class="number-btn bg-green-500">1</button>
+                <button onclick="handleBet('2')" class="number-btn bg-red-500">2</button>
+                <button onclick="handleBet('3')" class="number-btn bg-green-500">3</button>
+                <button onclick="handleBet('4')" class="number-btn bg-red-500">4</button>
+                <button onclick="handleBet('5')" class="number-btn bg-gradient-to-br from-green-500 to-purple-500">5</button>
+                <button onclick="handleBet('6')" class="number-btn bg-red-500">6</button>
+                <button onclick="handleBet('7')" class="number-btn bg-green-500">7</button>
+                <button onclick="handleBet('8')" class="number-btn bg-red-500">8</button>
+                <button onclick="handleBet('9')" class="number-btn bg-green-500">9</button>
+            </div>
+
+            <div class="flex justify-between gap-1 mb-6 bg-gray-100 p-1 rounded-lg">
+                <button onclick="setMult(this, 1)" class="mult-btn flex-1 py-2 text-xs font-bold active-mult rounded-md">X1</button>
+                <button onclick="setMult(this, 5)" class="mult-btn flex-1 py-2 text-xs font-bold bg-white rounded-md">X5</button>
+                <button onclick="setMult(this, 10)" class="mult-btn flex-1 py-2 text-xs font-bold bg-white rounded-md">X10</button>
+                <button onclick="setMult(this, 50)" class="mult-btn flex-1 py-2 text-xs font-bold bg-white rounded-md">X50</button>
+                <button onclick="setMult(this, 100)" class="mult-btn flex-1 py-2 text-xs font-bold bg-white rounded-md">X100</button>
+            </div>
+
+            <div class="flex gap-4 mb-10">
+                <button onclick="handleBet('Big')" class="flex-1 bg-[#ff9800] text-white py-4 rounded-3xl font-black shadow-xl text-xl tracking-widest italic">BIG 🧡</button>
+                <button onclick="handleBet('Small')" class="flex-1 bg-[#2196f3] text-white py-4 rounded-3xl font-black shadow-xl text-xl tracking-widest italic">SMALL 💙</button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-t-[3rem] p-6 shadow-2xl min-h-[400px]">
+            <div class="flex justify-around mb-6 border-b">
+                <button onclick="switchTab('game')" id="tab-game-btn" class="pb-2 px-4 font-bold history-btn-active uppercase text-xs">Game History</button>
+                <button onclick="switchTab('my')" id="tab-my-btn" class="pb-2 px-4 font-bold text-gray-400 uppercase text-xs">My History</button>
+            </div>
+
+            <div id="game-history-table">
+                <table class="w-full text-center">
+                    <thead class="bg-gray-50 text-[10px] text-gray-500 uppercase font-bold">
+                        <tr><th class="py-3">Period</th><th>Number</th><th>Size</th><th>Color</th></tr>
+                    </thead>
+                    <tbody id="gameHistoryList" class="text-sm font-bold text-gray-700"></tbody>
+                </table>
             </div>
         </div>
     </div>
 
     <script>
-        // --- पासवर्ड और लॉगिन सिस्टम ---
-        const MASTER_PASSWORD = "BMS@ADMIN@2026"; // आपका पासवर्ड
-
-        function loginAdmin() {
-            const input = document.getElementById('adminPassInput').value;
-            if(input === MASTER_PASSWORD) {
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('adminContent').classList.remove('hidden');
-                initMonitor();
-            } else {
-                document.getElementById('errorMsg').classList.remove('hidden');
-            }
-        }
-
-        // --- फ़ायरबेस कॉन्फ़िगरेशन ---
-        const firebaseConfig = { 
-            apiKey: "AIzaSyAoohz6Nzes8Aa5RC8rTHN-mOxpyQVSbgw", 
-            authDomain: "bms--game.firebaseapp.com", 
-            databaseURL: "https://bms--game-default-rtdb.firebaseio.com", 
-            projectId: "bms--game", 
-            appId: "1:787142148166:web:ecb5fae61084a079d50a47" 
+        // Firebase Config को पूरा किया गया है ताकि डेटा लोड हो सके
+        const firebaseConfig = {
+            apiKey: "AIzaSyAoohz6Nzes8Aa5RC8rTHN-mOxpyQVSbgw",
+            authDomain: "bms--game.firebaseapp.com",
+            databaseURL: "https://bms--game-default-rtdb.firebaseio.com",
+            projectId: "bms--game",
+            storageBucket: "bms--game.appspot.com",
+            messagingSenderId: "787142148166",
+            appId: "1:787142148166:web:ecb5fae61084a079d50a47"
         };
-        firebase.initializeApp(firebaseConfig); 
+        firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let currentMode = '30s';
-        let modeSeconds = 30;
-        let timers = { '30s': 30, '1m': 60, '3m': 180, '5m': 300 };
-        let manualSelections = { '30s': null, '1m': null, '3m': null, '5m': null };
+        let timeLeft = 30;
+        let currentMode = 30;
+        const userPhone = localStorage.getItem("userPhone") || "test_user";
 
-        function setMode(m, sec) {
-            currentMode = m;
-            modeSeconds = sec;
-            document.querySelectorAll('button[id^="btn"]').forEach(b => b.classList.remove('active-mode'));
-            document.getElementById('btn'+m).classList.add('active-mode');
-            document.getElementById('currentModeDisplay').innerText = m.toUpperCase();
-        }
+        // यहाँ से लोडिंग स्क्रीन हटेगी
+        setTimeout(() => {
+            document.getElementById('welcome').style.display = 'none';
+            document.getElementById('main-content').classList.remove('hidden');
+            startTimer();
+            generatePeriod();
+        }, 2000);
 
-        function resetToAuto() { 
-            manualSelections[currentMode] = null; 
-            document.getElementById('statusBtn').innerText = "AUTO-PILOT 🤖"; 
-            document.getElementById('statusBtn').className = "text-[10px] bg-blue-600 px-4 py-1 rounded-full font-bold"; 
-        }
+        db.ref('users/' + userPhone + '/wallet').on('value', snap => {
+            document.getElementById('main-balance').innerText = (snap.val() || 0).toFixed(2);
+        });
 
-        function quickResult(type) { 
-            manualSelections[currentMode] = type; 
-            document.getElementById('statusBtn').innerText = "FIXED: "+type.toUpperCase(); 
-            document.getElementById('statusBtn').className = "text-[10px] bg-red-600 px-4 py-1 rounded-full font-bold"; 
-        }
-
-        // लाइव बेट्स लोड करना
-        function loadLiveBets() {
-            db.ref('user_bets').on('value', snap => {
-                let totals = { Big:0, Small:0, Green:0, Red:0, Violet:0 };
-                snap.forEach(user => {
-                    user.forEach(betObj => {
-                        let bet = betObj.val();
-                        if(bet.status === "Waiting" && bet.mode == modeSeconds) {
-                            if(totals.hasOwnProperty(bet.bet)) totals[bet.bet] += parseFloat(bet.amount);
-                        }
-                    });
-                });
-                document.getElementById('betBig').innerText = "₹" + totals.Big;
-                document.getElementById('betSmall').innerText = "₹" + totals.Small;
-                document.getElementById('betGreen').innerText = "₹" + totals.Green;
-                document.getElementById('betRed').innerText = "₹" + totals.Red;
-                document.getElementById('betViolet').innerText = "₹" + totals.Violet;
-            });
-        }
-
-        // टाइमर सिस्टम
-        function startTimers() {
+        function startTimer() {
             setInterval(() => {
-                for(let m in timers) {
-                    timers[m]--;
-                    if(timers[m] < 0) {
-                        processWin(m);
-                        timers[m] = (m==='30s'?30:m==='1m'?60:m==='3m'?180:300);
-                    }
-                }
-                let t = timers[currentMode];
-                document.getElementById('timerText').innerText = (Math.floor(t/60)<10?"0"+Math.floor(t/60):Math.floor(t/60)) + ":" + (t%60<10?"0"+t%60:t%60);
+                timeLeft--;
+                if (timeLeft < 0) { timeLeft = currentMode; generatePeriod(); }
+                updateTimerDisplay();
             }, 1000);
         }
 
-        // विनिंग लॉजिक
-        function processWin(mode) {
-            let winNum;
-            let sel = manualSelections[mode];
-            
-            if(sel) {
-                // मैनुअल कंट्रोल लॉजिक
-                if(sel === 'Big') winNum = 7;
-                else if(sel === 'Small') winNum = 2;
-                else if(sel === 'Green') winNum = 3;
-                else if(sel === 'Red') winNum = 8;
-                else if(sel === 'Violet') winNum = 0;
-            } else {
-                // ऑटो मोड: रैंडम नंबर
-                winNum = Math.floor(Math.random() * 10);
-            }
+        function updateTimerDisplay() {
+            let m = Math.floor(timeLeft / 60);
+            let s = timeLeft % 60;
+            document.getElementById('timer').innerText = (m < 10 ? "0"+m : m) + ":" + (s < 10 ? "0"+s : s);
+        }
 
+        function generatePeriod() {
             let d = new Date();
-            let pId = d.getFullYear().toString() + (d.getMonth() + 1).toString().padStart(2, '0') + d.getDate().toString().padStart(2, '0') + d.getHours().toString().padStart(2, '0') + d.getMinutes().toString().padStart(2, '0') + (mode==='30s'?30:mode==='1m'?60:mode==='3m'?180:300);
-            
-            let color = (winNum%2===0) ? 'Red' : 'Green';
-            if(winNum === 0 || winNum === 5) color = 'Violet';
-            let size = (winNum >= 5) ? 'Big' : 'Small';
-
-            db.ref('game_results/' + (mode==='30s'?30:mode==='1m'?60:mode==='3m'?180:300)).push({ 
-                period: pId, number: winNum, color: color, size: size 
-            });
-            
-            manualSelections[mode] = null;
-            if(mode === currentMode) resetToAuto();
+            let pId = d.getFullYear().toString() + (d.getMonth() + 1).toString().padStart(2, '0') + d.getDate().toString() + d.getHours().toString() + d.getMinutes().toString();
+            document.getElementById('period-id').innerText = pId;
         }
 
-        function initMonitor() {
-            loadLiveBets();
-            startTimers();
-            
-            // रिचार्ज लिस्ट लोड करना
-            db.ref('recharge_requests').on('value', snap => {
-                let h = ""; 
-                snap.forEach(c => {
-                    let r = c.val();
-                    if(r.status === 'Pending') {
-                        h += `<div class="bg-gray-900 p-2 rounded-xl flex justify-between items-center border border-gray-700 mb-2">
-                            <span>Ph: ${r.phone} <b class="text-green-500">₹${r.amount}</b><br><small class="text-gray-500">UTR: ${r.utr}</small></span>
-                            <button onclick="approveRC('${c.key}','${r.phone}',${r.amount})" class="bg-green-600 px-3 py-1 rounded-lg font-bold">OK</button>
-                        </div>`;
-                    }
-                });
-                document.getElementById('rechargeList').innerHTML = h || "No Requests";
-            });
-
-            // विड्रॉल लिस्ट लोड करना
-            db.ref('withdraw_requests').on('value', snap => {
-                let h = ""; 
-                snap.forEach(c => {
-                    let w = c.val();
-                    if(w.status === "Pending") {
-                        h += `<div class="bg-gray-900 p-2 rounded-xl flex justify-between items-center border border-gray-700 mb-2">
-                            <span>Ph: ${w.phone} <b class="text-orange-500">₹${w.amount}</b></span>
-                            <button onclick="approveWD('${c.key}')" class="bg-orange-600 px-3 py-1 rounded-lg font-bold">PAID</button>
-                        </div>`;
-                    }
-                });
-                document.getElementById('withdrawList').innerHTML = h || "No Requests";
-            });
-        }
-
-        function approveRC(id, ph, amt) {
-            db.ref('users/'+ph+'/wallet').transaction(curr => (curr||0) + amt);
-            db.ref('recharge_requests/'+id).update({ status: 'Approved' });
-            alert("Recharge Approved!");
-        }
-
-        function approveWD(id) {
-            db.ref('withdraw_requests/'+id).update({ status: "Success" });
-            alert("Withdrawal Marked as Paid!");
-        }
+        function toggleChat() { alert('Chat support starting...'); }
+        function handleBet(val) { alert('Bet placed: ' + val); }
+        function switchTab(tab) { console.log('Switched to ' + tab); }
     </script>
 </body>
 </html>
