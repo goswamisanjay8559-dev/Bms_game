@@ -28,7 +28,6 @@
         .active-mult { background-color: #22c55e !important; color: white !important; border-color: #16a34a !important; transform: scale(1.05); }
         .nav-tab { font-size: 12px; font-weight: 600; color: #777; transition: 0.3s; }
         .history-btn-active { color: #ef4444; border-bottom: 2px solid #ef4444; }
-        .chart-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
     </style>
 </head>
 <body class="pb-24">
@@ -73,7 +72,7 @@
                 </div>
                 <div class="text-right">
                     <p class="text-[10px] text-gray-400 font-black uppercase tracking-widest">Period ID</p>
-                    <p id="period-id" class="text-lg font-extrabold text-red-500">--</p>
+                    <p id="period-id" class="text-lg font-extrabold text-red-500">Loading...</p>
                 </div>
             </div>
         </div>
@@ -100,10 +99,9 @@
 
             <div class="flex justify-between gap-1 mb-6 bg-gray-100 p-1 rounded-lg">
                 <button onclick="setMult(this, 1)" class="mult-btn flex-1 py-2 text-xs font-bold active-mult rounded-md">X1</button>
-                <button onclick="setMult(this, 5)" class="mult-btn flex-1 py-2 text-xs font-bold bg-white rounded-md">X5</button>
                 <button onclick="setMult(this, 10)" class="mult-btn flex-1 py-2 text-xs font-bold bg-white rounded-md">X10</button>
-                <button onclick="setMult(this, 50)" class="mult-btn flex-1 py-2 text-xs font-bold bg-white rounded-md">X50</button>
                 <button onclick="setMult(this, 100)" class="mult-btn flex-1 py-2 text-xs font-bold bg-white rounded-md">X100</button>
+                <button onclick="setMult(this, 1000)" class="mult-btn flex-1 py-2 text-xs font-bold bg-white rounded-md">X1000</button>
             </div>
 
             <div class="flex gap-4 mb-10">
@@ -139,11 +137,8 @@
     </div>
 
     <script>
-        // *** SECURITY CHECK: LOGIN/REGISTER REDIRECT ***
         const userPhone = localStorage.getItem("userPhone");
-        if (!userPhone) {
-            window.location.href = "login.html"; // अगर लॉगिन नहीं है तो यहाँ भेजेगा
-        }
+        if (!userPhone) { window.location.href = "login.html"; }
 
         const firebaseConfig = {
             apiKey: "AIzaSyAoohz6Nzes8Aa5RC8rTHN-mOxpyQVSbgw",
@@ -159,25 +154,42 @@
 
         let timeLeft = 30;
         let currentMode = 30;
+        let selectedMult = 1;
+        let currentWallet = 0;
 
-        // लोडिंग स्क्रीन हटाने और गेम शुरू करने का फंक्शन
-        setTimeout(() => {
-            document.getElementById('welcome').style.display = 'none';
-            document.getElementById('main-content').classList.remove('hidden');
-            startTimer();
-            generatePeriod();
-        }, 2000);
+        window.onload = () => {
+            setTimeout(() => {
+                document.getElementById('welcome').style.display = 'none';
+                document.getElementById('main-content').classList.remove('hidden');
+                startTimer();
+                loadData();
+            }, 2000);
+        };
 
-        // वॉलेट बैलेंस लोड करना
-        db.ref('users/' + userPhone + '/wallet').on('value', snap => {
-            document.getElementById('main-balance').innerText = (snap.val() || 0).toFixed(2);
-        });
+        function loadData() {
+            // Wallet Balance Live Update
+            db.ref('users/' + userPhone + '/wallet').on('value', snap => {
+                currentWallet = snap.val() || 0;
+                document.getElementById('main-balance').innerText = currentWallet.toFixed(2);
+            });
+
+            // Game History Live Update
+            db.ref('results').limitToLast(10).on('value', snap => {
+                const list = document.getElementById('gameHistoryList');
+                list.innerHTML = "";
+                snap.forEach(child => {
+                    const d = child.val();
+                    list.innerHTML = `<tr><td class="py-3 text-xs">${child.key}</td><td>${d.number}</td><td>${d.size}</td><td class="text-${d.color.toLowerCase()}-500">${d.color}</td></tr>` + list.innerHTML;
+                });
+            });
+        }
 
         function startTimer() {
             setInterval(() => {
                 timeLeft--;
-                if (timeLeft < 0) { timeLeft = currentMode; generatePeriod(); }
+                if (timeLeft < 0) { timeLeft = currentMode; }
                 updateTimerDisplay();
+                generatePeriod();
             }, 1000);
         }
 
@@ -193,23 +205,49 @@
             document.getElementById('period-id').innerText = pId;
         }
 
-        function toggleChat() { alert('Chat support is active!'); }
-        function handleBet(val) { alert('Bet placed: ' + val); }
-        
-        // टैब स्विच फंक्शन (Game vs My History)
+        function setMult(btn, val) {
+            selectedMult = val;
+            document.querySelectorAll('.mult-btn').forEach(b => b.classList.remove('active-mult', 'bg-white'));
+            btn.classList.add('active-mult');
+        }
+
+        function handleBet(type) {
+            const amount = 10 * selectedMult; // Base bet ₹10
+            if (currentWallet < amount) {
+                alert("Low Balance!");
+                return;
+            }
+            
+            const pId = document.getElementById('period-id').innerText;
+            const betData = { period: pId, type: type, amount: amount, time: new Date().toLocaleTimeString() };
+
+            db.ref('users/' + userPhone + '/wallet').set(currentWallet - amount).then(() => {
+                db.ref('users/' + userPhone + '/bets/' + pId).set(betData);
+                alert("Bet Placed: ₹" + amount);
+                updateMyHistory(betData);
+            });
+        }
+
+        function updateMyHistory(data) {
+            const list = document.getElementById('myHistoryList');
+            list.innerHTML = `<tr><td class="py-3 text-xs">${data.period}</td><td>${data.type}</td><td>₹${data.amount}</td><td class="text-orange-500">Pending</td></tr>` + list.innerHTML;
+        }
+
         function switchTab(tab) {
+            const gameTab = document.getElementById('game-history-table');
+            const myTab = document.getElementById('my-history-table');
+            const gBtn = document.getElementById('tab-game-btn');
+            const mBtn = document.getElementById('tab-my-btn');
+
             if(tab === 'game') {
-                document.getElementById('game-history-table').classList.remove('hidden');
-                document.getElementById('my-history-table').classList.add('hidden');
-                document.getElementById('tab-game-btn').classList.add('history-btn-active');
-                document.getElementById('tab-my-btn').classList.remove('history-btn-active');
+                gameTab.classList.remove('hidden'); myTab.classList.add('hidden');
+                gBtn.classList.add('history-btn-active'); mBtn.classList.remove('history-btn-active');
             } else {
-                document.getElementById('game-history-table').classList.add('hidden');
-                document.getElementById('my-history-table').classList.remove('hidden');
-                document.getElementById('tab-game-btn').classList.remove('history-btn-active');
-                document.getElementById('tab-my-btn').classList.add('history-btn-active');
+                gameTab.classList.add('hidden'); myTab.classList.remove('hidden');
+                gBtn.classList.remove('history-btn-active'); mBtn.classList.add('history-btn-active');
             }
         }
+        function toggleChat() { alert('Support is active!'); }
     </script>
 </body>
 </html>
