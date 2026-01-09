@@ -7,7 +7,10 @@
     
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="apple-touch-icon" href="icon.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#ff416c">
+    <link rel="manifest" href="manifest.json">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -21,17 +24,19 @@
         .bms-header { background: linear-gradient(to bottom, #ff416c, #ff4b2b); border-radius: 0 0 35px 35px; box-shadow: 0 10px 20px rgba(255, 65, 108, 0.3); }
         .timer-active { border-bottom: 3px solid #ff416c; color: #ff416c !important; font-weight: 800; }
         .number-btn { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.15); color: white; transition: 0.3s; }
-        .active-mult { background-color: #22c55e !important; color: white !important; transform: scale(1.05); }
-        .nav-tab { font-size: 12px; font-weight: 600; color: #777; }
+        .number-btn:active { transform: scale(0.9); }
+        .active-mult { background-color: #22c55e !important; color: white !important; border-color: #16a34a !important; transform: scale(1.05); }
+        .nav-tab { font-size: 12px; font-weight: 600; color: #777; transition: 0.3s; }
         .history-btn-active { color: #ef4444; border-bottom: 2px solid #ef4444; }
+        .chart-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
     </style>
 </head>
 <body class="pb-24">
 
     <div id="welcome" class="welcome-screen">
         <div>
-            <h1 class="text-5xl font-black italic tracking-tighter">BMS GAME</h1>
-            <p class="mt-3 text-lg font-medium tracking-[0.3em] uppercase">Made In India 🇮🇳</p>
+            <h1 class="text-5xl font-black italic tracking-tighter text-white">BMS GAME</h1>
+            <p class="mt-3 text-lg font-medium tracking-[0.3em] uppercase text-white">Made In India 🇮🇳</p>
         </div>
     </div>
 
@@ -75,9 +80,9 @@
 
         <div class="px-4">
             <div class="grid grid-cols-3 gap-3 mb-6">
-                <button onclick="handleBet('Green')" class="bg-[#22c55e] text-white py-3 rounded-xl font-bold">Green</button>
-                <button onclick="handleBet('Violet')" class="bg-[#a855f7] text-white py-3 rounded-xl font-bold">Violet</button>
-                <button onclick="handleBet('Red')" class="bg-[#ef4444] text-white py-3 rounded-xl font-bold">Red</button>
+                <button onclick="handleBet('Green')" class="bg-[#22c55e] text-white py-3 rounded-xl font-bold shadow-lg text-sm">Green</button>
+                <button onclick="handleBet('Violet')" class="bg-[#a855f7] text-white py-3 rounded-xl font-bold shadow-lg text-sm">Violet</button>
+                <button onclick="handleBet('Red')" class="bg-[#ef4444] text-white py-3 rounded-xl font-bold shadow-lg text-sm">Red</button>
             </div>
 
             <div class="grid grid-cols-5 gap-4 p-5 bg-white rounded-[2rem] shadow-inner mb-6 border border-gray-50">
@@ -94,7 +99,7 @@
             </div>
 
             <div class="flex justify-between gap-1 mb-6 bg-gray-100 p-1 rounded-lg">
-                <button onclick="setMult(this, 1)" class="mult-btn flex-1 py-2 text-xs font-bold active-mult bg-white rounded-md">X1</button>
+                <button onclick="setMult(this, 1)" class="mult-btn flex-1 py-2 text-xs font-bold active-mult rounded-md">X1</button>
                 <button onclick="setMult(this, 5)" class="mult-btn flex-1 py-2 text-xs font-bold bg-white rounded-md">X5</button>
                 <button onclick="setMult(this, 10)" class="mult-btn flex-1 py-2 text-xs font-bold bg-white rounded-md">X10</button>
                 <button onclick="setMult(this, 50)" class="mult-btn flex-1 py-2 text-xs font-bold bg-white rounded-md">X50</button>
@@ -102,8 +107,8 @@
             </div>
 
             <div class="flex gap-4 mb-10">
-                <button onclick="handleBet('Big')" class="flex-1 bg-[#ff9800] text-white py-4 rounded-3xl font-black text-xl italic">BIG 🧡</button>
-                <button onclick="handleBet('Small')" class="flex-1 bg-[#2196f3] text-white py-4 rounded-3xl font-black text-xl italic">SMALL 💙</button>
+                <button onclick="handleBet('Big')" class="flex-1 bg-[#ff9800] text-white py-4 rounded-3xl font-black shadow-xl text-xl tracking-widest italic">BIG 🧡</button>
+                <button onclick="handleBet('Small')" class="flex-1 bg-[#2196f3] text-white py-4 rounded-3xl font-black shadow-xl text-xl tracking-widest italic">SMALL 💙</button>
             </div>
         </div>
 
@@ -112,6 +117,7 @@
                 <button onclick="switchTab('game')" id="tab-game-btn" class="pb-2 px-4 font-bold history-btn-active uppercase text-xs">Game History</button>
                 <button onclick="switchTab('my')" id="tab-my-btn" class="pb-2 px-4 font-bold text-gray-400 uppercase text-xs">My History</button>
             </div>
+
             <div id="game-history-table">
                 <table class="w-full text-center">
                     <thead class="bg-gray-50 text-[10px] text-gray-500 uppercase font-bold">
@@ -120,11 +126,25 @@
                     <tbody id="gameHistoryList" class="text-sm font-bold text-gray-700"></tbody>
                 </table>
             </div>
-            <div id="my-history-table" class="hidden text-center text-gray-400 py-10">No History Yet</div>
+
+            <div id="my-history-table" class="hidden">
+                <table class="w-full text-center">
+                    <thead class="bg-gray-50 text-[10px] text-gray-500 uppercase font-bold">
+                        <tr><th class="py-3">Period</th><th>Bet</th><th>Amount</th><th>Result</th></tr>
+                    </thead>
+                    <tbody id="myHistoryList" class="text-sm font-bold text-gray-700"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <script>
+        // *** SECURITY CHECK: LOGIN/REGISTER REDIRECT ***
+        const userPhone = localStorage.getItem("userPhone");
+        if (!userPhone) {
+            window.location.href = "login.html"; // अगर लॉगिन नहीं है तो यहाँ भेजेगा
+        }
+
         const firebaseConfig = {
             apiKey: "AIzaSyAoohz6Nzes8Aa5RC8rTHN-mOxpyQVSbgw",
             authDomain: "bms--game.firebaseapp.com",
@@ -139,9 +159,8 @@
 
         let timeLeft = 30;
         let currentMode = 30;
-        let currentMult = 1;
-        const userPhone = localStorage.getItem("userPhone") || "test_user";
 
+        // लोडिंग स्क्रीन हटाने और गेम शुरू करने का फंक्शन
         setTimeout(() => {
             document.getElementById('welcome').style.display = 'none';
             document.getElementById('main-content').classList.remove('hidden');
@@ -149,6 +168,7 @@
             generatePeriod();
         }, 2000);
 
+        // वॉलेट बैलेंस लोड करना
         db.ref('users/' + userPhone + '/wallet').on('value', snap => {
             document.getElementById('main-balance').innerText = (snap.val() || 0).toFixed(2);
         });
@@ -173,40 +193,23 @@
             document.getElementById('period-id').innerText = pId;
         }
 
-        function changeMode(btn, sec) {
-            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('timer-active'));
-            btn.classList.add('timer-active');
-            currentMode = sec;
-            timeLeft = sec;
-            generatePeriod();
-        }
-
-        function setMult(btn, val) {
-            document.querySelectorAll('.mult-btn').forEach(b => b.classList.remove('active-mult'));
-            btn.classList.add('active-mult');
-            currentMult = val;
-        }
-
-        function handleBet(type) {
-            alert('Bet Selected: ' + type + '\nMultiplier: X' + currentMult);
-        }
-
+        function toggleChat() { alert('Chat support is active!'); }
+        function handleBet(val) { alert('Bet placed: ' + val); }
+        
+        // टैब स्विच फंक्शन (Game vs My History)
         function switchTab(tab) {
-            const gameBtn = document.getElementById('tab-game-btn');
-            const myBtn = document.getElementById('tab-my-btn');
-            const gameTable = document.getElementById('game-history-table');
-            const myTable = document.getElementById('my-history-table');
-            
             if(tab === 'game') {
-                gameBtn.classList.add('history-btn-active'); myBtn.classList.remove('history-btn-active');
-                gameTable.classList.remove('hidden'); myTable.classList.add('hidden');
+                document.getElementById('game-history-table').classList.remove('hidden');
+                document.getElementById('my-history-table').classList.add('hidden');
+                document.getElementById('tab-game-btn').classList.add('history-btn-active');
+                document.getElementById('tab-my-btn').classList.remove('history-btn-active');
             } else {
-                myBtn.classList.add('history-btn-active'); gameBtn.classList.remove('history-btn-active');
-                myTable.classList.remove('hidden'); gameTable.classList.add('hidden');
+                document.getElementById('game-history-table').classList.add('hidden');
+                document.getElementById('my-history-table').classList.remove('hidden');
+                document.getElementById('tab-game-btn').classList.remove('history-btn-active');
+                document.getElementById('tab-my-btn').classList.add('history-btn-active');
             }
         }
-
-        function toggleChat() { alert('Support is currently offline. Please try later.'); }
     </script>
 </body>
 </html>
